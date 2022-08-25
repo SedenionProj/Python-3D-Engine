@@ -37,9 +37,5 @@ def projection(x,y,z):
 while True:
     clear(' ')
     c+=0.01
-    for i in range(-5,5):
-        for j in range(-5,5):
-            for k in range(1,6):
-                pos = projection(i,j,k+c)
-                putPixel(pos[0],pos[1],'#')
+    
     draw()
