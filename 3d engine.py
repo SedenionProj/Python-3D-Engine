@@ -12,11 +12,19 @@ except:
     except:
         print('Failed to install "keyboard" module,\ncheck your internet connection, make sure you have admin privilege\nor try : pip install keybord')
         input()
+        exit()
+
+# init variables
 width,height = os.get_terminal_size()
 pixelBuffer = [' ']*(width*height-width)
 focalLengh = 1
-c=0
+camPosX = 0
+camPosY = 0
+camPosZ = 0
+camRotX = 0
+camRotY = 0
 
+# screen
 def clear(char):
     for i in range(width*height-width):
         pixelBuffer[i] = char
@@ -26,16 +34,83 @@ def putPixel(x,y,char):
     if 1<x<width-3 and 1<y<height-2:
         pixelBuffer[round(y)*width+round(x)] = char
 
-def projection(x,y,z):
-    nx = 2*x/width
-    ny = 2*y/height
-    nz = (2*z/100)
-    px = nx*focalLengh/nz
-    py = ny*focalLengh/nz
-    return (px+1)*width/2,(py+1)*height/2
+# math
+def AddVec3(v1,v2):
+    return v1[0]+v2[0],v1[1]+v2[1],v1[2]+v2[2]
+
+# transform
+def projection(pos):
+    nz = (2*pos[2]/2)
+    px = pos[0]*focalLengh/nz
+    py = pos[1]*focalLengh/nz
+    return round((px+1)*width/2),round((py+1)*height/2)
+
+def rotationx(pos):
+    y1=cos(camRotX)*pos[1]-sin(camRotX)*pos[2]
+    z1=sin(camRotX)*pos[1]+cos(camRotX)*pos[2]
+    return pos[0],y1,z1
+
+def rotationy(pos):
+    x1=cos(camRotY)*pos[0]+sin(camRotY)*pos[2]
+    z1=-sin(camRotY)*pos[0]+cos(camRotY)*pos[2]
+    return x1,pos[1],z1
+
+def transform(vertex):
+    v=[]
+    for pos in vertex:
+        v.append(projection(rotationx(rotationy(AddVec3(pos,(camPosX,camPosY,camPosZ))))))
+    triangle(v)
+
+
+# rasterization
+def eq(p,a,b):
+    return (a[0]-p[0])*(b[1]-p[1])-(a[1]-p[1])*(b[0]-p[0])
+
+def triangle(pos):    
+    xmin = min(pos[0][0],pos[1][0],pos[2][0])
+    xmax = max(pos[0][0],pos[1][0],pos[2][0])+1
+    ymin = min(pos[0][1],pos[1][1],pos[2][1])
+    ymax = max(pos[0][1],pos[1][1],pos[2][1])+1
+
+    for y in range(ymin,ymax):
+        for x in range(xmin,xmax):
+            w0=eq((x,y),pos[2],pos[0])
+            w1=eq((x,y),pos[0],pos[1])
+            w2=eq((x,y),pos[1],pos[2])
+            if (w0 >= 0 and w1 >= 0 and w2 >= 0)or (-w0 >= 0 and -w1 >= 0 and -w2 >= 0):
+                putPixel(x,y,'#')
+
+
+# main loop
+v = [(-0.5,-0.5,2),(0.5,-0.5,2),(0,0.5,2)]
 
 while True:
     clear(' ')
-    c+=0.01
-    
+    if keyboard.is_pressed("up arrow"):
+        if camRotX>-1.57:
+            camRotX-=0.005
+    if keyboard.is_pressed("down arrow"):
+        if camRotX<1.57:
+            camRotX+=0.005
+    if keyboard.is_pressed("left arrow"):
+        camRotY+=0.005
+    if keyboard.is_pressed("right arrow"):
+        camRotY-=0.005
+    if keyboard.is_pressed("z"):
+        camPosX-=-sin(camRotY)/50
+        camPosZ-=cos(camRotY)/50
+    if keyboard.is_pressed("s"):
+        camPosX+=-sin(camRotY)/50
+        camPosZ+=cos(camRotY)/50
+    if keyboard.is_pressed("q"):
+        camPosX+=cos(camRotY)/50
+        camPosZ+=sin(camRotY)/50
+    if keyboard.is_pressed("d"):
+        camPosX-=cos(camRotY)/50
+        camPosZ-=sin(camRotY)/50
+    if keyboard.is_pressed("space"):
+        camPosY+=0.1
+    if keyboard.is_pressed("shift"):
+        camPosY-=0.1
+    transform(v)
     draw()
