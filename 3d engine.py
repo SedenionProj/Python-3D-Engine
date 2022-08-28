@@ -31,7 +31,7 @@ def clear(char):
 def draw():
     print(''.join(pixelBuffer),end='')
 def putPixel(x,y,char):
-    if 1<x<width-3 and 1<y<height-2:
+    if 0<=x<width and 0<=y<height-1:
         pixelBuffer[round(y)*width+round(x)] = char
 
 # math
@@ -41,7 +41,7 @@ def AddVec3(v1,v2):
 # transform
 def projection(pos):
     nz = (2*pos[2]/2)
-    px = pos[0]*focalLengh/nz
+    px = (2*height/width)*pos[0]*focalLengh/nz
     py = pos[1]*focalLengh/nz
     return round((px+1)*width/2),round((py+1)*height/2)
 
@@ -71,31 +71,42 @@ def triangle(pos):
     xmax = max(pos[0][0],pos[1][0],pos[2][0])+1
     ymin = min(pos[0][1],pos[1][1],pos[2][1])
     ymax = max(pos[0][1],pos[1][1],pos[2][1])+1
-
     for y in range(ymin,ymax):
+        if 0<=y<height-1:
+            pass
+        else:
+            continue
         for x in range(xmin,xmax):
+            if 0<=x<width:
+                pass
+            else:
+                continue
             w0=eq((x,y),pos[2],pos[0])
             w1=eq((x,y),pos[0],pos[1])
             w2=eq((x,y),pos[1],pos[2])
-            if (w0 >= 0 and w1 >= 0 and w2 >= 0)or (-w0 >= 0 and -w1 >= 0 and -w2 >= 0):
+            if (w0 >= 0 and w1 >= 0 and w2 >= 0) or (-w0 >= 0 and -w1 >= 0 and -w2 >= 0):
                 putPixel(x,y,'#')
 
+def mesh(m):
+    for tri in m:
+        transform(tri)
 
 # main loop
-v = [(-0.5,-0.5,2),(0.5,-0.5,2),(0,0.5,2)]
+vertex = [[(-1,-1,1),(-1,-1,3),(1,-1,1)],
+        [(-1,-1,3),(1,-1,1),(1,-1,3)]]
 
 while True:
     clear(' ')
     if keyboard.is_pressed("up arrow"):
         if camRotX>-1.57:
-            camRotX-=0.005
+            camRotX-=0.01
     if keyboard.is_pressed("down arrow"):
         if camRotX<1.57:
-            camRotX+=0.005
+            camRotX+=0.01
     if keyboard.is_pressed("left arrow"):
-        camRotY+=0.005
+        camRotY+=0.01
     if keyboard.is_pressed("right arrow"):
-        camRotY-=0.005
+        camRotY-=0.01
     if keyboard.is_pressed("z"):
         camPosX-=-sin(camRotY)/50
         camPosZ-=cos(camRotY)/50
@@ -109,8 +120,8 @@ while True:
         camPosX-=cos(camRotY)/50
         camPosZ-=sin(camRotY)/50
     if keyboard.is_pressed("space"):
-        camPosY+=0.1
+        camPosY+=0.02
     if keyboard.is_pressed("shift"):
-        camPosY-=0.1
-    transform(v)
+        camPosY-=0.02
+    mesh(vertex)
     draw()
