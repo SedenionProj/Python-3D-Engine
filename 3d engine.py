@@ -17,12 +17,15 @@ except:
 # init variables
 width,height = os.get_terminal_size()
 pixelBuffer = [' ']*(width*height-width)
-focalLengh = 1
 camPosX = 0
 camPosY = 0
 camPosZ = 0
 camRotX = 0
 camRotY = 0
+last = 0
+focalLengh = 1
+sensitivityMov = 0.5
+sensitivityRot = 0.25
 
 # screen
 def clear(char):
@@ -97,31 +100,36 @@ vertex = [[(-1,-1,1),(-1,-1,3),(1,-1,1)],
 
 while True:
     clear(' ')
+
+    current = time.time()
+    dt = (current-last)*10
+    last=current
+
     if keyboard.is_pressed("up arrow"):
         if camRotX>-1.57:
-            camRotX-=0.01
+            camRotX-=dt*sensitivityRot
     if keyboard.is_pressed("down arrow"):
         if camRotX<1.57:
-            camRotX+=0.01
+            camRotX+=dt*sensitivityRot
     if keyboard.is_pressed("left arrow"):
-        camRotY+=0.01
+        camRotY+=dt*sensitivityRot
     if keyboard.is_pressed("right arrow"):
-        camRotY-=0.01
+        camRotY-=dt*sensitivityRot
     if keyboard.is_pressed("z"):
-        camPosX-=-sin(camRotY)/50
-        camPosZ-=cos(camRotY)/50
+        camPosX-=-sin(camRotY)*dt*sensitivityMov
+        camPosZ-=cos(camRotY)*dt*sensitivityMov
     if keyboard.is_pressed("s"):
-        camPosX+=-sin(camRotY)/50
-        camPosZ+=cos(camRotY)/50
+        camPosX+=-sin(camRotY)*dt*sensitivityMov
+        camPosZ+=cos(camRotY)*dt*sensitivityMov
     if keyboard.is_pressed("q"):
-        camPosX+=cos(camRotY)/50
-        camPosZ+=sin(camRotY)/50
+        camPosX+=cos(camRotY)*dt*sensitivityMov
+        camPosZ+=sin(camRotY)*dt*sensitivityMov
     if keyboard.is_pressed("d"):
-        camPosX-=cos(camRotY)/50
-        camPosZ-=sin(camRotY)/50
+        camPosX-=cos(camRotY)*dt*sensitivityMov
+        camPosZ-=sin(camRotY)*dt*sensitivityMov
     if keyboard.is_pressed("space"):
-        camPosY+=0.02
+        camPosY+=dt*sensitivityMov
     if keyboard.is_pressed("shift"):
-        camPosY-=0.02
+        camPosY-=dt*sensitivityMov
     mesh(vertex)
     draw()
