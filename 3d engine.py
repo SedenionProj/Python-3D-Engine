@@ -45,7 +45,7 @@ def AddVec3(v1,v2):
 def projection(pos):
     nz = (2*pos[2]/2)
     px = (2*height/width)*pos[0]*focalLengh/nz
-    py = pos[1]*focalLengh/nz
+    py = -pos[1]*focalLengh/nz
     return round((px+1)*width/2),round((py+1)*height/2)
 
 def rotationx(pos):
@@ -96,7 +96,7 @@ def mesh(m):
 
 # main loop
 vertex = [[(-1,-1,1),(-1,-1,3),(1,-1,1)],
-        [(-1,-1,3),(1,-1,1),(1,-1,3)]]
+         [(-1,-1,3),(1,-1,1),(1,-1,3)]]
 
 while True:
     clear(' ')
@@ -105,10 +105,10 @@ while True:
     dt = (current-last)*10
     last=current
 
-    if keyboard.is_pressed("up arrow"):
+    if keyboard.is_pressed("down arrow"):
         if camRotX>-1.57:
             camRotX-=dt*sensitivityRot
-    if keyboard.is_pressed("down arrow"):
+    if keyboard.is_pressed("up arrow"):
         if camRotX<1.57:
             camRotX+=dt*sensitivityRot
     if keyboard.is_pressed("left arrow"):
@@ -128,8 +128,8 @@ while True:
         camPosX-=cos(camRotY)*dt*sensitivityMov
         camPosZ-=sin(camRotY)*dt*sensitivityMov
     if keyboard.is_pressed("space"):
-        camPosY+=dt*sensitivityMov
-    if keyboard.is_pressed("shift"):
         camPosY-=dt*sensitivityMov
+    if keyboard.is_pressed("shift"):
+        camPosY+=dt*sensitivityMov
     mesh(vertex)
     draw()
