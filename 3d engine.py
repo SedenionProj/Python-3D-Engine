@@ -19,13 +19,13 @@ width,height = os.get_terminal_size()
 pixelBuffer = [' ']*(width*height-width)
 camPosX = 0
 camPosY = 0
-camPosZ = 0
+camPosZ = 2
 camRotX = 0
 camRotY = 0
 last = 0
 focalLengh = 1
-sensitivityMov = 0.5
-sensitivityRot = 0.25
+sensitivityMov = 0.35
+sensitivityRot = 0.2
 
 # screen
 def clear(char):
@@ -34,7 +34,7 @@ def clear(char):
 def draw():
     print(''.join(pixelBuffer),end='')
 def putPixel(x,y,char):
-    if 0<=x<width and 0<=y<height-1:
+    if insideScreen((x,y)):
         pixelBuffer[round(y)*width+round(x)] = char
 
 # math
@@ -58,11 +58,10 @@ def rotationy(pos):
     z1=-sin(camRotY)*pos[0]+cos(camRotY)*pos[2]
     return x1,pos[1],z1
 
-def transform(vertex):
-    v=[]
-    for pos in vertex:
-        v.append(projection(rotationx(rotationy(AddVec3(pos,(camPosX,camPosY,camPosZ))))))
-    triangle(v)
+def transform(tri):
+    v=[projection(rotationx(rotationy(AddVec3(pos,(camPosX,camPosY,camPosZ))))) for pos in tri]
+    clipped = clipping(v)
+    triangle(clipped)
 
 
 # rasterization
@@ -89,10 +88,27 @@ def triangle(pos):
             w2=eq((x,y),pos[1],pos[2])
             if (w0 >= 0 and w1 >= 0 and w2 >= 0) or (-w0 >= 0 and -w1 >= 0 and -w2 >= 0):
                 putPixel(x,y,'#')
-
+def insideScreen(pos):
+    return 0<=pos[0]<width and 0<=pos[1]<height-1
 def mesh(m):
     for tri in m:
         transform(tri)
+
+def clipping(tri):
+    clipped = []
+    count = 0
+    for pos in tri:
+        if not insideScreen(pos):
+            count+=1
+    if count == 0:
+        return tri
+    if count == 1:
+        return clipped
+    if count == 2:
+        return clipped
+    if count == 3:
+        return [(0,0,0),(0,0,0),(0,0,0)]
+
 
 # main loop
 vertex = [[(-1,-1,1),(-1,-1,3),(1,-1,1)],
