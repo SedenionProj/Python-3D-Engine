@@ -1,3 +1,4 @@
+from cgitb import text
 import os
 import time
 import pip
@@ -32,8 +33,10 @@ sensitivityRot = 0.2
 def clear(char):
     for i in range(width*height-width):
         pixelBuffer[i] = char
-def draw():
-    print(''.join(pixelBuffer),end='')
+def draw(*info):
+    info = ''.join(info)
+    info += ' '*(width - len(info))
+    print(info+''.join(pixelBuffer),end='')
 def putPixel(x,y,char):
     if insideScreen((x,y)):
         pixelBuffer[round(y)*width+round(x)] = char
@@ -162,5 +165,6 @@ while True:
     if keyboard.is_pressed("shift"):
         camPosY+=dt*sensitivityMov
     mesh(vertex)
-    draw()
-    print("info :",(camPosX,camPosY,camPosZ),LinePlaneCollision((-sin(camRotY)*cos(camRotX),sin(camRotX),cos(camRotY)*cos(camRotX)),(camPosX,camPosY,camPosZ),(0,-1,0),(0,0,0)))
+    #(camPosX,camPosY,camPosZ),LinePlaneCollision((-sin(camRotY)*cos(camRotX),sin(camRotX),cos(camRotY)*cos(camRotX)),(camPosX,camPosY,camPosZ),(0,-1,0),(0,1,0))
+    draw("fps : ",str(10/dt))
+    
