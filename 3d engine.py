@@ -1,7 +1,7 @@
 import os
 import time
 import pip
-from math import sin, cos, sqrt
+from math import sin, cos
 try:
     import keyboard
 except:
@@ -16,6 +16,7 @@ except:
 
 # init variables
 width,height = os.get_terminal_size()
+height-=1
 pixelBuffer = [' ']*(width*height-width)
 camPosX = 0
 camPosY = 0
@@ -41,6 +42,15 @@ def putPixel(x,y,char):
 def AddVec3(v1,v2):
     return v1[0]+v2[0],v1[1]+v2[1],v1[2]+v2[2]
 
+def SubVec3(v1,v2):
+    return v1[0]-v2[0],v1[1]-v2[1],v1[2]-v2[2]
+
+def dot(v1,v2):
+    return v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]
+
+def MultScal(l,v):
+    return l*v[0],l*v[1],l*v[2]
+
 # transform
 def projection(pos):
     nz = (2*pos[2]/2)
@@ -59,9 +69,12 @@ def rotationy(pos):
     return x1,pos[1],z1
 
 def transform(tri):
-    v=[projection(rotationx(rotationy(AddVec3(pos,(camPosX,camPosY,camPosZ))))) for pos in tri]
+    v=[rotationx(rotationy(AddVec3(pos,(camPosX,camPosY,camPosZ)))) for pos in tri]
+    test=[projection(rotationx(rotationy(AddVec3(pos,(camPosX,camPosY,camPosZ))))) for pos in tri]
+
     clipped = clipping(v)
-    triangle(clipped)
+
+    triangle(test)
 
 
 # rasterization
@@ -88,26 +101,27 @@ def triangle(pos):
             w2=eq((x,y),pos[1],pos[2])
             if (w0 >= 0 and w1 >= 0 and w2 >= 0) or (-w0 >= 0 and -w1 >= 0 and -w2 >= 0):
                 putPixel(x,y,'#')
+                
 def insideScreen(pos):
     return 0<=pos[0]<width and 0<=pos[1]<height-1
+
 def mesh(m):
     for tri in m:
         transform(tri)
 
+def LinePlaneCollision(planeNormal, planePoint, p1, p2):
+    u=SubVec3(p2,p1)
+    dotp = dot(planeNormal,u)
+    if abs(dotp) < 1e-6:
+        return 'f'
+    
+    w = SubVec3(p1, planePoint)
+    si = -dot(planeNormal,w)/dotp
+    u = MultScal(si,u)
+    return AddVec3(p1,u)
+
 def clipping(tri):
-    clipped = []
-    count = 0
-    for pos in tri:
-        if not insideScreen(pos):
-            count+=1
-    if count == 0:
-        return tri
-    if count == 1:
-        return clipped
-    if count == 2:
-        return clipped
-    if count == 3:
-        return [(0,0,0),(0,0,0),(0,0,0)]
+    return tri
 
 
 # main loop
@@ -122,10 +136,10 @@ while True:
     last=current
 
     if keyboard.is_pressed("down arrow"):
-        if camRotX>-1.57:
+        if camRotX>-2:#1.57
             camRotX-=dt*sensitivityRot
     if keyboard.is_pressed("up arrow"):
-        if camRotX<1.57:
+        if camRotX<2:
             camRotX+=dt*sensitivityRot
     if keyboard.is_pressed("left arrow"):
         camRotY+=dt*sensitivityRot
@@ -149,3 +163,4 @@ while True:
         camPosY+=dt*sensitivityMov
     mesh(vertex)
     draw()
+    print("info :",(camPosX,camPosY,camPosZ),LinePlaneCollision((-sin(camRotY)*cos(camRotX),sin(camRotX),cos(camRotY)*cos(camRotX)),(camPosX,camPosY,camPosZ),(0,-1,0),(0,0,0)))
