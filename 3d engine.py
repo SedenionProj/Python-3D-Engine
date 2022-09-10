@@ -1,4 +1,3 @@
-from cgitb import text
 import os
 import time
 import pip
@@ -21,7 +20,7 @@ height-=1
 pixelBuffer = [' ']*(width*height-width)
 camPosX = 0
 camPosY = 0
-camPosZ = 2
+camPosZ = -5
 camRotX = 0
 camRotY = 0
 last = 0
@@ -38,7 +37,7 @@ def draw(*info):
     info += ' '*(width - len(info))
     print(info+''.join(pixelBuffer),end='')
 def putPixel(x,y,char):
-    if insideScreen((x,y)):
+    if 0<=x<width and 0<=y<height-1:
         pixelBuffer[round(y)*width+round(x)] = char
 
 # math
@@ -56,9 +55,9 @@ def MultScal(l,v):
 
 # transform
 def projection(pos):
-    nz = (2*pos[2]/2)
-    px = (2*height/width)*pos[0]*focalLengh/nz
-    py = -pos[1]*focalLengh/nz
+    nz = focalLengh*2*pos[2]/2
+    px = (2*height/width)*pos[0]/nz
+    py = -pos[1]/nz
     return round((px+1)*width/2),round((py+1)*height/2)
 
 def rotationx(pos):
@@ -72,12 +71,12 @@ def rotationy(pos):
     return x1,pos[1],z1
 
 def transform(tri):
-    v=[rotationx(rotationy(AddVec3(pos,(camPosX,camPosY,camPosZ)))) for pos in tri]
-    test=[projection(rotationx(rotationy(AddVec3(pos,(camPosX,camPosY,camPosZ))))) for pos in tri]
+    v=[projection(rotationx(rotationy(AddVec3(pos,(-camPosX,-camPosY,-camPosZ))))) for pos in tri]
+    test=[projection(pos) for pos in tri]
 
-    clipped = clipping(v)
+    clipped = clipping(tri)
 
-    triangle(test)
+    triangle(v)
 
 
 # rasterization
@@ -104,9 +103,6 @@ def triangle(pos):
             w2=eq((x,y),pos[1],pos[2])
             if (w0 >= 0 and w1 >= 0 and w2 >= 0) or (-w0 >= 0 and -w1 >= 0 and -w2 >= 0):
                 putPixel(x,y,'#')
-                
-def insideScreen(pos):
-    return 0<=pos[0]<width and 0<=pos[1]<height-1
 
 def mesh(m):
     for tri in m:
@@ -115,21 +111,34 @@ def mesh(m):
 def LinePlaneCollision(planeNormal, planePoint, p1, p2):
     u=SubVec3(p2,p1)
     dotp = dot(planeNormal,u)
-    if abs(dotp) < 1e-6:
-        return 'f'
+    if abs(dotp) < 1e-2:
+        return '// '
     
     w = SubVec3(p1, planePoint)
     si = -dot(planeNormal,w)/dotp
     u = MultScal(si,u)
     return AddVec3(p1,u)
 
+def inZ(planeNormal, planePoint, p):
+    v = SubVec3(planePoint,p)
+    sign = dot(v,planeNormal)
+    if sign>0:
+        return True
+    return False
+
 def clipping(tri):
-    return tri
+    global inf
+    global camPos
+    normal = (-sin(camRotY)*cos(camRotX),sin(camRotX),cos(camRotY)*cos(camRotX))
+    camPos = (camPosX,camPosY,camPosZ)
+    inf =(inZ(normal,camPos,tri[0]),inZ(normal,camPos,tri[1]),inZ(normal,camPos,tri[2]))
+    LinePlaneCollision(normal,camPos,tri[0],tri[1])
+
 
 
 # main loop
-vertex = [[(-1,-1,1),(-1,-1,3),(1,-1,1)],
-         [(-1,-1,3),(1,-1,1),(1,-1,3)]]
+vertex = [[(-1,-1,2),(-1,-1,10),(1,-1,2)]]
+         #[(-1,-1,3),(1,-1,1),(1,-1,3)]]
 
 while True:
     clear(' ')
@@ -139,32 +148,34 @@ while True:
     last=current
 
     if keyboard.is_pressed("down arrow"):
-        if camRotX>-2:#1.57
+        if camRotX>-1.57:
             camRotX-=dt*sensitivityRot
     if keyboard.is_pressed("up arrow"):
-        if camRotX<2:
+        if camRotX<1.57:
             camRotX+=dt*sensitivityRot
     if keyboard.is_pressed("left arrow"):
         camRotY+=dt*sensitivityRot
     if keyboard.is_pressed("right arrow"):
         camRotY-=dt*sensitivityRot
-    if keyboard.is_pressed("z"):
+    if keyboard.is_pressed("s"):
         camPosX-=-sin(camRotY)*dt*sensitivityMov
         camPosZ-=cos(camRotY)*dt*sensitivityMov
-    if keyboard.is_pressed("s"):
+    if keyboard.is_pressed("z"):
         camPosX+=-sin(camRotY)*dt*sensitivityMov
         camPosZ+=cos(camRotY)*dt*sensitivityMov
-    if keyboard.is_pressed("q"):
+    if keyboard.is_pressed("d"):
         camPosX+=cos(camRotY)*dt*sensitivityMov
         camPosZ+=sin(camRotY)*dt*sensitivityMov
-    if keyboard.is_pressed("d"):
+    if keyboard.is_pressed("q"):
         camPosX-=cos(camRotY)*dt*sensitivityMov
         camPosZ-=sin(camRotY)*dt*sensitivityMov
-    if keyboard.is_pressed("space"):
-        camPosY-=dt*sensitivityMov
     if keyboard.is_pressed("shift"):
+        camPosY-=dt*sensitivityMov
+    if keyboard.is_pressed("space"):
         camPosY+=dt*sensitivityMov
     mesh(vertex)
     #(camPosX,camPosY,camPosZ),LinePlaneCollision((-sin(camRotY)*cos(camRotX),sin(camRotX),cos(camRotY)*cos(camRotX)),(camPosX,camPosY,camPosZ),(0,-1,0),(0,1,0))
-    draw("fps : ",str(10/dt))
+    if dt>0:
+        fps = 10/dt
+    draw(str(inf),str(camPos)," fps : ",str(fps))
     
