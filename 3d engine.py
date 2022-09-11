@@ -1,4 +1,5 @@
 import os
+from pydoc import cli
 import time
 import pip
 from math import sin, cos
@@ -71,13 +72,13 @@ def rotationy(pos):
     return x1,pos[1],z1
 
 def transform(tri):
-    v=[projection(rotationx(rotationy(AddVec3(pos,(-camPosX,-camPosY,-camPosZ))))) for pos in tri]
-    test=[projection(pos) for pos in tri]
-
     clipped = clipping(tri)
-
-    triangle(v)
-
+    if clipped is None:
+        return
+    for tri2 in clipped:
+        v=tri2.copy()
+        v = [projection(rotationx(rotationy(AddVec3(i,(-camPosX,-camPosY,-camPosZ))))) for i in tri2]
+        triangle(v)
 
 # rasterization
 def eq(p,a,b):
@@ -119,7 +120,16 @@ def LinePlaneCollision(planeNormal, planePoint, p1, p2):
     u = MultScal(si,u)
     return AddVec3(p1,u)
 
-def inZ(planeNormal, planePoint, p):
+def inZ(planeNormal, planePoint,tri):
+    L = []
+    for vert in tri:
+        v = SubVec3(planePoint,vert)
+        sign = dot(v,planeNormal)
+        if sign>0:
+            L.append(vert)
+    return L
+
+def test(planeNormal, planePoint, p):
     v = SubVec3(planePoint,p)
     sign = dot(v,planeNormal)
     if sign>0:
@@ -127,18 +137,36 @@ def inZ(planeNormal, planePoint, p):
     return False
 
 def clipping(tri):
-    global inf
     global camPos
+    v = tri.copy()
+    clip = []
     normal = (-sin(camRotY)*cos(camRotX),sin(camRotX),cos(camRotY)*cos(camRotX))
     camPos = (camPosX,camPosY,camPosZ)
-    inf =(inZ(normal,camPos,tri[0]),inZ(normal,camPos,tri[1]),inZ(normal,camPos,tri[2]))
-    LinePlaneCollision(normal,camPos,tri[0],tri[1])
+    zNear = AddVec3(camPos,MultScal(0.1,normal))
+    L = inZ(normal,zNear,v)
 
+    if len(L) == 0:
+        return [v]
+    elif len(L) == 3:
+        return None
+    elif len(L) == 1:
+        v.remove(L[0])
+        vi0 = LinePlaneCollision(normal,zNear,v[0],L[0])
+        vi1 = LinePlaneCollision(normal,zNear,v[1],L[0])
+        clip.append([vi0,v[0],v[1]])
+        clip.append([vi0,v[1],vi1])
+    elif len(L) == 2:
+        v.remove(L[0])
+        v.remove(L[1])
+        vi0 = LinePlaneCollision(normal,zNear,L[0],v[0])
+        vi1 = LinePlaneCollision(normal,zNear,L[1],v[0])
+        clip.append([vi0,vi1,v[0]])
+    return clip
 
 
 # main loop
-vertex = [[(-1,-1,2),(-1,-1,10),(1,-1,2)]]
-         #[(-1,-1,3),(1,-1,1),(1,-1,3)]]
+vertex = [[(-1,-1,2),(-1,-1,4),(1,-1,2)],
+          [(1,-1,4),(-1,-1,4),(1,-1,2)]]
 
 while True:
     clear(' ')
@@ -174,8 +202,7 @@ while True:
     if keyboard.is_pressed("space"):
         camPosY+=dt*sensitivityMov
     mesh(vertex)
-    #(camPosX,camPosY,camPosZ),LinePlaneCollision((-sin(camRotY)*cos(camRotX),sin(camRotX),cos(camRotY)*cos(camRotX)),(camPosX,camPosY,camPosZ),(0,-1,0),(0,1,0))
     if dt>0:
         fps = 10/dt
-    draw(str(inf),str(camPos)," fps : ",str(fps))
+    draw(" fps : ",str(fps))
     
