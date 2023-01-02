@@ -1,5 +1,5 @@
 import os
-from pydoc import cli
+from random import randint
 import time
 import pip
 from math import sin, cos
@@ -15,6 +15,19 @@ except:
         input()
         exit()
 
+
+
+def show_exception_and_exit(exc_type, exc_value, tb):
+    import traceback
+    traceback.print_exception(exc_type, exc_value, tb)
+    input("Press key to exit.")
+    sys.exit(-1)
+
+import sys
+sys.excepthook = show_exception_and_exit
+
+
+
 # init variables
 width,height = os.get_terminal_size()
 height-=1
@@ -28,7 +41,7 @@ last = 0
 focalLengh = 1.5
 sensitivityMov = 0.35
 sensitivityRot = 0.2
-
+color = "0-@█#"
 # screen
 def clear(char):
     for i in range(width*height-width):
@@ -89,6 +102,7 @@ def triangle(pos):
     xmax = max(pos[0][0],pos[1][0],pos[2][0])+1
     ymin = min(pos[0][1],pos[1][1],pos[2][1])
     ymax = max(pos[0][1],pos[1][1],pos[2][1])+1
+    px = color[randint(0,len(color)-1)]
     for y in range(ymin,ymax):
         if 0<=y<height-1:
             pass
@@ -103,7 +117,7 @@ def triangle(pos):
             w1=eq((x,y),pos[0],pos[1])
             w2=eq((x,y),pos[1],pos[2])
             if (w0 >= 0 and w1 >= 0 and w2 >= 0) or (-w0 >= 0 and -w1 >= 0 and -w2 >= 0):
-                putPixel(x,y,'#')
+                putPixel(x,y,px)
 
 def mesh(m):
     for tri in m:
@@ -113,7 +127,7 @@ def LinePlaneCollision(planeNormal, planePoint, p1, p2):
     u=SubVec3(p2,p1)
     dotp = dot(planeNormal,u)
     if abs(dotp) < 1e-2:
-        return '// '
+        return (0,0,0)
     
     w = SubVec3(p1, planePoint)
     si = -dot(planeNormal,w)/dotp
@@ -163,9 +177,25 @@ def clipping(tri):
         clip.append([vi0,vi1,v[0]])
     return clip
 
+# obj
+def loadObj(name):
+    f = open(name, "r")
+    lines = [line.rstrip('\n').split(' ') for line in f.readlines() if line.rstrip('\n')]
+    f.close()
+    vert = [list(map(float,line[1:])) for line in lines if line[0] == 'v']
+    order = [line[1:] for line in lines if line[0] == 'f']
+
+    vertex = []
+    for tri in order:
+        if len(tri) == 4:
+            vertex.append([vert[int(tri[0])-1],vert[int(tri[1])-1],vert[int(tri[2])-1]])
+            vertex.append([vert[int(tri[2])-1],vert[int(tri[3])-1],vert[int(tri[0])-1]])
+        if len(tri) == 3:
+            vertex.append([vert[int(tri[0])-1],vert[int(tri[1])-1],vert[int(tri[2])-1]])
+    return vertex
 
 # main loop
-vertex = [[[-1, -1, -1], [-1, -1, -1], [-1, -1, -1]], [[-1, 1, -1], [-1, 1, -1], [-1, -1, -1]], [[1, 1, -1], [1, -1, -1], [-1, -1, -1]], [[1, -1, -1], [1, 1, -1], [-1, -1, -1]], [[1, -1, -1], [-1, -1, -1], [-1, 1, -1]], [[1, 1, -1], [-1, 1, -1], [-1, 1, -1]], [[1, 1, 1], [1, -1, -1], [-1, 1, -1]], [[1, -1, 1], [1, 1, -1], [-1, 1, -1]], [[1, -1, 1], [-1, -1, -1], [1, -1, -1]], [[1, 1, 1], [-1, 1, -1], [1, -1, -1]], [[-1, 1, 1], [1, -1, -1], [1, -1, -1]], [[-1, -1, 1], [1, 1, -1], [1, -1, -1]], [[-1, -1, 1], [-1, -1, -1], [1, 1, -1]], [[-1, 1, 1], [-1, 1, -1], [1, 1, -1]], [[-1, 1, -1], [1, -1, -1], [1, 1, -1]], [[-1, -1, -1], [1, 1, -1], [1, 1, -1]], [[-1, 1, -1], [-1, -1, -1], [1, -1, 1]], [[-1, 1, 1], [-1, 1, -1], [1, -1, 1]], [[1, 1, 1], [1, -1, -1], [1, -1, 1]], [[1, 1, -1], [1, 1, -1], [1, -1, 1]], [[-1, -1, 1], [-1, -1, -1], [1, 1, 1]], [[-1, -1, -1], [-1, 1, -1], [1, 1, 1]], [[1, -1, -1], [1, -1, -1], [1, 1, 1]], [[1, -1, 1], [1, 1, -1], [1, 1, 1]]]
+vertex = loadObj("test.obj")
 
 while True:
     clear(' ')
@@ -204,4 +234,3 @@ while True:
     if dt>0:
         fps = 10/dt
     draw(" fps : ",str(round(fps)))
-    
