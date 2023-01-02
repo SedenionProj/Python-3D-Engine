@@ -2,7 +2,7 @@ import os
 from random import randint
 import time
 import pip
-from math import sin, cos
+from math import sin, cos,sqrt
 try:
     import keyboard
 except:
@@ -41,7 +41,7 @@ last = 0
 focalLengh = 1.5
 sensitivityMov = 0.35
 sensitivityRot = 0.2
-color = "0-@█#"
+color = ".-;=0&@"
 # screen
 def clear(char):
     for i in range(width*height-width):
@@ -67,6 +67,20 @@ def dot(v1,v2):
 def MultScal(l,v):
     return l*v[0],l*v[1],l*v[2]
 
+def crossProd(v1,v2):
+    v = []
+    v.append(v1[1]*v2[2]-v1[2]*v2[1])
+    v.append(v1[2]*v2[0]-v1[0]*v2[2])
+    v.append(v1[0]*v2[1]-v1[1]*v2[0])
+    return v
+
+def dist(v):
+    return sqrt(v[0]**2+v[1]**2+v[2]**2)
+
+def normalize(v):
+    l = dist(v)
+    return [v[0]/l,v[1]/l,v[2]/l] if l!=0 else 0.0
+
 # transform
 def projection(pos):
     nz = focalLengh*2*pos[2]/2
@@ -89,20 +103,29 @@ def transform(tri):
     if clipped is None:
         return
     for tri2 in clipped:
-        v=tri2.copy()
-        v = [projection(rotationx(rotationy(AddVec3(i,(-camPosX,-camPosY,-camPosZ))))) for i in tri2]
-        triangle(v)
+        v=[]
+        translated = [AddVec3(i,(-camPosX,-camPosY,-camPosZ)) for i in tri2]
+        line1 = SubVec3(tri2[1],tri2[0])
+        line2 = SubVec3(tri2[2],tri2[0])
+        norm = normalize(crossProd(line1,line2))
+        if dot(norm,SubVec3(translated[0],[camPosX,camPosY,camPosZ])) < 0:
+            v = [projection(rotationx(rotationy(i))) for i in translated]
+            lum = getChar(dot(norm,[0,0,-1]))
+            #v = [projection(rotationx(rotationy(AddVec3(i,(-camPosX,-camPosY,-camPosZ))))) for i in tri2]
+            triangle(v,lum)
 
 # rasterization
+def getChar(value):
+    return color[round(value*6)] if value>=0 else "."
+
 def eq(p,a,b):
     return (a[0]-p[0])*(b[1]-p[1])-(a[1]-p[1])*(b[0]-p[0])
 
-def triangle(pos):    
+def triangle(pos,char):    
     xmin = min(pos[0][0],pos[1][0],pos[2][0])
     xmax = max(pos[0][0],pos[1][0],pos[2][0])+1
     ymin = min(pos[0][1],pos[1][1],pos[2][1])
     ymax = max(pos[0][1],pos[1][1],pos[2][1])+1
-    px = color[randint(0,len(color)-1)]
     for y in range(ymin,ymax):
         if 0<=y<height-1:
             pass
@@ -117,7 +140,7 @@ def triangle(pos):
             w1=eq((x,y),pos[0],pos[1])
             w2=eq((x,y),pos[1],pos[2])
             if (w0 >= 0 and w1 >= 0 and w2 >= 0) or (-w0 >= 0 and -w1 >= 0 and -w2 >= 0):
-                putPixel(x,y,px)
+                putPixel(x,y,char)
 
 def mesh(m):
     for tri in m:
@@ -142,13 +165,6 @@ def inZ(planeNormal, planePoint,tri):
         if sign>0:
             L.append(vert)
     return L
-
-def test(planeNormal, planePoint, p):
-    v = SubVec3(planePoint,p)
-    sign = dot(v,planeNormal)
-    if sign>0:
-        return True
-    return False
 
 def clipping(tri):
     global camPos
