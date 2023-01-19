@@ -1,5 +1,4 @@
 import os
-from random import randint
 import time
 import pip
 from math import sin, cos,sqrt
@@ -15,8 +14,6 @@ except:
         input()
         exit()
 
-
-
 def show_exception_and_exit(exc_type, exc_value, tb):
     import traceback
     traceback.print_exception(exc_type, exc_value, tb)
@@ -25,8 +22,6 @@ def show_exception_and_exit(exc_type, exc_value, tb):
 
 import sys
 sys.excepthook = show_exception_and_exit
-
-
 
 # init variables
 width,height = os.get_terminal_size()
@@ -39,9 +34,10 @@ camRotX = 0
 camRotY = 0
 last = 0
 focalLengh = 1.5
-sensitivityMov = 0.35
+sensitivityMov = 0.1
 sensitivityRot = 0.2
 color = ".-;=0&@"
+
 # screen
 def clear(char):
     for i in range(width*height-width):
@@ -68,18 +64,14 @@ def MultScal(l,v):
     return l*v[0],l*v[1],l*v[2]
 
 def crossProd(v1,v2):
-    v = []
-    v.append(v1[1]*v2[2]-v1[2]*v2[1])
-    v.append(v1[2]*v2[0]-v1[0]*v2[2])
-    v.append(v1[0]*v2[1]-v1[1]*v2[0])
-    return v
+    return v1[1]*v2[2]-v1[2]*v2[1],v1[2]*v2[0]-v1[0]*v2[2],v1[0]*v2[1]-v1[1]*v2[0]
 
 def dist(v):
     return sqrt(v[0]**2+v[1]**2+v[2]**2)
 
 def normalize(v):
     l = dist(v)
-    return [v[0]/l,v[1]/l,v[2]/l] if l!=0 else 0.0
+    return v[0]/l,v[1]/l,v[2]/l if l!=0 else 0.0
 
 # transform
 def projection(pos):
@@ -103,15 +95,12 @@ def transform(tri):
     if clipped is None:
         return
     for tri2 in clipped:
-        v=[]
-        translated = [AddVec3(i,(-camPosX,-camPosY,-camPosZ)) for i in tri2]
         line1 = SubVec3(tri2[1],tri2[0])
         line2 = SubVec3(tri2[2],tri2[0])
         norm = normalize(crossProd(line1,line2))
-        if dot(norm,SubVec3(translated[0],[camPosX,camPosY,camPosZ])) < 0:
-            v = [projection(rotationx(rotationy(i))) for i in translated]
+        if dot(norm,SubVec3(tri2[0],[camPosX,camPosY,camPosZ])) < 0:
             lum = getChar(dot(norm,[0,0,-1]))
-            #v = [projection(rotationx(rotationy(AddVec3(i,(-camPosX,-camPosY,-camPosZ))))) for i in tri2]
+            v = [projection(rotationx(rotationy(AddVec3(i,(-camPosX,-camPosY,-camPosZ))))) for i in tri2]
             triangle(v,lum)
 
 # rasterization
@@ -128,19 +117,13 @@ def triangle(pos,char):
     ymax = max(pos[0][1],pos[1][1],pos[2][1])+1
     for y in range(ymin,ymax):
         if 0<=y<height-1:
-            pass
-        else:
-            continue
-        for x in range(xmin,xmax):
-            if 0<=x<width:
-                pass
-            else:
-                continue
-            w0=eq((x,y),pos[2],pos[0])
-            w1=eq((x,y),pos[0],pos[1])
-            w2=eq((x,y),pos[1],pos[2])
-            if (w0 >= 0 and w1 >= 0 and w2 >= 0) or (-w0 >= 0 and -w1 >= 0 and -w2 >= 0):
-                putPixel(x,y,char)
+            for x in range(xmin,xmax):
+                if 0<=x<width:
+                    w0=eq((x,y),pos[2],pos[0])
+                    w1=eq((x,y),pos[0],pos[1])
+                    w2=eq((x,y),pos[1],pos[2])
+                    if (w0 >= 0 and w1 >= 0 and w2 >= 0) or (-w0 >= 0 and -w1 >= 0 and -w2 >= 0):
+                        putPixel(x,y,char)
 
 def mesh(m):
     for tri in m:
@@ -149,7 +132,7 @@ def mesh(m):
 def LinePlaneCollision(planeNormal, planePoint, p1, p2):
     u=SubVec3(p2,p1)
     dotp = dot(planeNormal,u)
-    if abs(dotp) < 1e-2:
+    if abs(dotp) < 1e-5:
         return (0,0,0)
     
     w = SubVec3(p1, planePoint)
@@ -159,22 +142,24 @@ def LinePlaneCollision(planeNormal, planePoint, p1, p2):
 
 def inZ(planeNormal, planePoint,tri):
     L = []
-    for vert in tri:
-        v = SubVec3(planePoint,vert)
-        sign = dot(v,planeNormal)
-        if sign>0:
-            L.append(vert)
-    return L
+    vert1 = dot(SubVec3(planePoint,tri[0]),planeNormal)
+    vert2 = dot(SubVec3(planePoint,tri[1]),planeNormal)
+    vert3 = dot(SubVec3(planePoint,tri[2]),planeNormal)
+    if vert1 > 0:
+        L.append(tri[0]) 
+    if vert2 > 0:
+        L.append(tri[1]) 
+    if vert3 > 0:
+        L.append(tri[2]) 
+    return L,vert1*vert3>0
 
 def clipping(tri):
-    global camPos
     v = tri.copy()
     clip = []
     normal = (-sin(camRotY)*cos(camRotX),sin(camRotX),cos(camRotY)*cos(camRotX))
     camPos = (camPosX,camPosY,camPosZ)
     zNear = AddVec3(camPos,MultScal(0.1,normal))
-    L = inZ(normal,zNear,v)
-
+    L,invert = inZ(normal,zNear,v)
     if len(L) == 0:
         return [v]
     elif len(L) == 3:
@@ -183,14 +168,21 @@ def clipping(tri):
         v.remove(L[0])
         vi0 = LinePlaneCollision(normal,zNear,v[0],L[0])
         vi1 = LinePlaneCollision(normal,zNear,v[1],L[0])
-        clip.append([vi0,v[0],v[1]])
-        clip.append([vi0,v[1],vi1])
+        if invert:
+            clip.append([v[0],vi0,v[1]])
+            clip.append([v[1],vi0,vi1])
+        else:
+            clip.append([vi0,v[0],v[1]])
+            clip.append([vi0,v[1],vi1])
     elif len(L) == 2:
         v.remove(L[0])
         v.remove(L[1])
         vi0 = LinePlaneCollision(normal,zNear,L[0],v[0])
         vi1 = LinePlaneCollision(normal,zNear,L[1],v[0])
-        clip.append([vi0,vi1,v[0]])
+        if invert:
+            clip.append([vi1,vi0,v[0]])
+        else:
+            clip.append([vi0,vi1,v[0]])
     return clip
 
 # obj
