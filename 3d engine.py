@@ -32,11 +32,16 @@ camPosY = 0
 camPosZ = -5
 camRotX = 0
 camRotY = 0
+
+lPosX = 0
+lPosY = 0
+lPosZ = 0
+
 last = 0
 focalLengh = 1.5
 sensitivityMov = 0.1
 sensitivityRot = 0.2
-color = ".-;=0&@"
+color = ".'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
 
 # screen
 def clear(char):
@@ -99,13 +104,13 @@ def transform(tri):
         line2 = SubVec3(tri2[2],tri2[0])
         norm = normalize(crossProd(line1,line2))
         if dot(norm,SubVec3(tri2[0],[camPosX,camPosY,camPosZ])) < 0:
-            lum = getChar(dot(norm,[0,0,-1]))
-            v = [projection(rotationx(rotationy(AddVec3(i,(-camPosX,-camPosY,-camPosZ))))) for i in tri2]
+            lum = getChar(dot(norm,normalize((lPosX,lPosY,lPosZ))))
+            v = [projection(rotationx(rotationy(SubVec3(i,(camPosX,camPosY,camPosZ))))) for i in tri2]
             triangle(v,lum)
 
 # rasterization
 def getChar(value):
-    return color[round(value*6)] if value>=0 else "."
+    return color[round(value*68)] if value>=0 else "."
 
 def eq(p,a,b):
     return (a[0]-p[0])*(b[1]-p[1])-(a[1]-p[1])*(b[0]-p[0])
@@ -126,6 +131,7 @@ def triangle(pos,char):
                         putPixel(x,y,char)
 
 def mesh(m):
+    m.sort(key=lambda x:dist(SubVec3(x[0],(camPosX,camPosY,camPosZ))),reverse=True)
     for tri in m:
         transform(tri)
 
@@ -205,6 +211,7 @@ def loadObj(name):
 # main loop
 vertex = loadObj("test.obj")
 
+t = 0
 while True:
     clear(' ')
 
@@ -212,6 +219,8 @@ while True:
     dt = (current-last)*10
     last=current
 
+    t+=dt
+    
     if keyboard.is_pressed("down arrow"):
         if camRotX>-1.57:
             camRotX-=dt*sensitivityRot
@@ -238,7 +247,13 @@ while True:
         camPosY-=dt*sensitivityMov
     if keyboard.is_pressed("space"):
         camPosY+=dt*sensitivityMov
+
+    lPosX=cos(t/50)
+    lPosY=sin(t/50)
+
     mesh(vertex)
+
     if dt>0:
         fps = 10/dt
+
     draw(" fps : ",str(round(fps)))
