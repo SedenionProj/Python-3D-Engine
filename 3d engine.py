@@ -29,7 +29,7 @@ height-=1
 pixelBuffer = [' ']*(width*height-width)
 camPosX = 0
 camPosY = 0
-camPosZ = -5
+camPosZ = -1
 camRotX = 0
 camRotY = 0
 
@@ -131,7 +131,7 @@ def triangle(pos,char):
                         putPixel(x,y,char)
 
 def mesh(m):
-    m.sort(key=lambda x:dist(SubVec3(x[0],(camPosX,camPosY,camPosZ))),reverse=True)
+    m.sort(key=lambda x:dist(SubVec3(MultScal(1/3,AddVec3(x[0],AddVec3(x[1],x[2]))),(camPosX,camPosY,camPosZ))),reverse=True)
     for tri in m:
         transform(tri)
 
@@ -209,9 +209,9 @@ def loadObj(name):
     return vertex
 
 # main loop
-vertex = loadObj("test.obj")
+vertexBuffer = loadObj("test.obj")
 
-t = 0
+t = 0.5
 while True:
     clear(' ')
 
@@ -219,7 +219,6 @@ while True:
     dt = (current-last)*10
     last=current
 
-    t+=dt
     
     if keyboard.is_pressed("down arrow"):
         if camRotX>-1.57:
@@ -243,15 +242,19 @@ while True:
     if keyboard.is_pressed("q"):
         camPosX-=cos(camRotY)*dt*sensitivityMov
         camPosZ-=sin(camRotY)*dt*sensitivityMov
+    if keyboard.is_pressed("l"):
+        sensitivityMov = 0.01
+    else:
+        sensitivityMov = 0.1
     if keyboard.is_pressed("shift"):
         camPosY-=dt*sensitivityMov
     if keyboard.is_pressed("space"):
         camPosY+=dt*sensitivityMov
 
-    lPosX=cos(t/50)
-    lPosY=sin(t/50)
+    lPosX=cos(t)
+    lPosY=sin(t)
 
-    mesh(vertex)
+    mesh(vertexBuffer)
 
     if dt>0:
         fps = 10/dt
