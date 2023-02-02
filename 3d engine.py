@@ -45,9 +45,12 @@ color = ".'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$
 
 # screen
 def clear(char):
+    # clear the screen pixel buffer
     for i in range(width*height-width):
         pixelBuffer[i] = char
+
 def draw(*info):
+    # draw the pixel buffer to the terminal
     info = ''.join(info)
     info += ' '*(width - len(info))
     print(info+''.join(pixelBuffer),end='')
@@ -76,20 +79,22 @@ def normalize(v):
     return v[0]/l,v[1]/l,v[2]/l if l!=0 else 0.0
 
 def eq(p,a,b):
+    # check in what side is "p" relative to the line (ab)
     return (a[0]-p[0])*(b[1]-p[1])-(a[1]-p[1])*(b[0]-p[0])
 
 def LinePlaneCollision(planeNormal, planePoint, p1, p2):
+    # return the coordinates of a line intersect a plane
     u=SubVec3(p2,p1)
     dotp = dot(planeNormal,u)
     if abs(dotp) < 1e-5:
         return (0,0,0)
-    
     w = SubVec3(p1, planePoint)
     si = -dot(planeNormal,w)/dotp
     u = MultScal(si,u)
     return AddVec3(p1,u)
 
 def inZ(planeNormal, planePoint,tri):
+    # detect in what side are the points of the triangle relative to the plane
     L = []
     vert1 = dot(SubVec3(planePoint,tri[0]),planeNormal)
     vert2 = dot(SubVec3(planePoint,tri[1]),planeNormal)
@@ -105,9 +110,11 @@ def inZ(planeNormal, planePoint,tri):
 # transform
 
 def getChar(value):
+    # get brightness char by index
     return color[round(value*68)] if value>=0 else "."
 
 def clipping(tri):
+    # clip a triangle with a plane (remove the triangle parts outside of the clipping plane)
     v = tri.copy()
     clip = []
     normal = (-sin(camRotY)*cos(camRotX),sin(camRotX),cos(camRotY)*cos(camRotX))
@@ -140,17 +147,20 @@ def clipping(tri):
     return clip
 
 def projection(pos):
+    # project from 3d coordinates to 2D
     nz = focalLengh*2*pos[2]/2
     px = (2*height/width)*pos[0]/nz
     py = -pos[1]/nz
     return round((px+1)*width/2),round((py+1)*height/2)
 
 def rotationx(pos):
+    # rotate points based on the x axis
     y1=cos(camRotX)*pos[1]-sin(camRotX)*pos[2]
     z1=sin(camRotX)*pos[1]+cos(camRotX)*pos[2]
     return pos[0],y1,z1
 
 def rotationy(pos):
+    # rotate points based on the y axis
     x1=cos(camRotY)*pos[0]+sin(camRotY)*pos[2]
     z1=-sin(camRotY)*pos[0]+cos(camRotY)*pos[2]
     return x1,pos[1],z1
@@ -158,10 +168,12 @@ def rotationy(pos):
 # shapes
 
 def putPixel(x,y,char):
+    # draw a pixel to the pixel buffer at position x,y
     if 0<=x<width and 0<=y<height-1:
         pixelBuffer[round(y)*width+round(x)] = char
 
-def triangle(pos,char):    
+def triangle(pos,char):
+    # draw a triangle to the pixel buffer
     xmin = min(pos[0][0],pos[1][0],pos[2][0])
     xmax = max(pos[0][0],pos[1][0],pos[2][0])+1
     ymin = min(pos[0][1],pos[1][1],pos[2][1])
@@ -177,6 +189,7 @@ def triangle(pos,char):
                         putPixel(x,y,char)
 
 def triangle3D(tri):
+    # transform 2D triangle to 3D
     clipped = clipping(tri)
     if clipped is None:
         return
@@ -190,12 +203,14 @@ def triangle3D(tri):
             triangle(v,lum)
 
 def mesh(m):
+    # draw all kind of shapes based on triangles
     m.sort(key=lambda x:dist(SubVec3(MultScal(1/3,AddVec3(x[0],AddVec3(x[1],x[2]))),(camPosX,camPosY,camPosZ))),reverse=True)
     for tri in m:
         triangle3D(tri)
 
 # obj
 def loadObj(name):
+    # load an obj file (disable normal on surface)
     f = open(name, "r")
     lines = [line.rstrip('\n').split(' ') for line in f.readlines() if line.rstrip('\n')]
     f.close()
@@ -212,18 +227,21 @@ def loadObj(name):
     return vertex
 
 def translate(m,vec):
+    # translate a mesh by a vector
     mesh = []
     for tri in m:
         mesh.append([AddVec3(tri[0],vec),AddVec3(tri[1],vec),AddVec3(tri[2],vec)])
     return mesh
 
 def scale(m,l):
+    # scale a mesh by a constant l
     mesh = []
     for tri in m:
         mesh.append([MultScal(l,tri[0]),MultScal(l,tri[1]),MultScal(l,tri[2])])
     return mesh
 
 def checkSameMesh(m1,m2):
+    # check if two mesh are overlapping at the same position
     v1 = []
     v2 = []
     [v1.append(i) for sl in m1 for i in sl if i not in v1]
@@ -234,6 +252,7 @@ def checkSameMesh(m1,m2):
     return True
 
 def removeFaces(m):
+    # (used on voxel engine) remove useless faces that are overlapping
     mesh = []
     for i in range(len(m)//2):
         face = [m[2*i],m[2*i+1]]
