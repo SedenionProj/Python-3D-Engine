@@ -41,7 +41,7 @@ last = 0
 focalLengh = 1.5
 sensitivityMov = 1
 sensitivityRot = 0.2
-color = ".'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
+color = ".'`-_^:,\"~|!\\/;+><rvcL)(lYi?IC][}{xnuztwoaJfhkZbjp1XUqdmMWO#0Q&8%B$@"
 
 # screen
 def clear(char):
@@ -111,7 +111,7 @@ def inZ(planeNormal, planePoint,tri):
 
 def getChar(value):
     # get brightness char by index
-    return color[round(value*68)] if value>=0 else "."
+    return color[round(value*67)] if value>=0 else "."
 
 def clipping(tri):
     # clip a triangle with a plane (remove the triangle parts outside of the clipping plane)
@@ -198,7 +198,7 @@ def triangle3D(tri):
         line2 = SubVec3(tri2[2],tri2[0])
         norm = normalize(crossProd(line1,line2))
         if dot(norm,SubVec3(tri2[0],[camPosX,camPosY,camPosZ])) < 0:
-            lum = getChar(dot(norm,normalize((lPosX,lPosY,lPosZ))))
+            lum = getChar(dot(norm,normalize(SubVec3((lPosX,lPosY,lPosZ),tri2[0]))))
             v = [projection(rotationx(rotationy(SubVec3(i,(camPosX,camPosY,camPosZ))))) for i in tri2]
             triangle(v,lum)
 
@@ -207,6 +207,18 @@ def mesh(m):
     m.sort(key=lambda x:dist(SubVec3(MultScal(1/3,AddVec3(x[0],AddVec3(x[1],x[2]))),(camPosX,camPosY,camPosZ))),reverse=True)
     for tri in m:
         triangle3D(tri)
+
+def drawTex(tx,ty,tex):
+    # draw a texture
+    x = tx
+    y = ty
+    for c in tex:
+        if c == '°':
+            y+=1
+            x=tx
+            continue
+        putPixel(x,y,c)
+        x+=1
 
 # obj
 def loadObj(name):
@@ -240,52 +252,19 @@ def scale(m,l):
         mesh.append([MultScal(l,tri[0]),MultScal(l,tri[1]),MultScal(l,tri[2])])
     return mesh
 
-def checkSameMesh(m1,m2):
-    # check if two mesh are overlapping at the same position
-    v1 = []
-    v2 = []
-    [v1.append(i) for sl in m1 for i in sl if i not in v1]
-    [v2.append(i) for sl in m2 for i in sl if i not in v2]
-    for v in v1:
-        if not v in v2:
-            return False
-    return True
-
-def removeFaces(m):
-    # (used on voxel engine) remove useless faces that are overlapping
-    mesh = []
-    for i in range(len(m)//2):
-        face = [m[2*i],m[2*i+1]]
-        check = True
-        for j in range(len(m)//2):
-            face1 = [m[2*j],m[2*j+1]]
-            if checkSameMesh(face,face1) and i!=j:
-                check =False
-        if check:
-            mesh+=face
-    return mesh
-
 
 # main
-vertexBuffer = []
-
-cube = [[[0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5]], [[-0.5, 0.5, 0.5], [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5]], [[0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5]], [[0.5, 0.5, 0.5], [0.5, -0.5, 0.5], [0.5, -0.5, -0.5]], [[-0.5, -0.5, -0.5], [-0.5, 0.5, -0.5], [0.5, 0.5, -0.5]], [[0.5, 0.5, -0.5], [0.5, -0.5, -0.5], [-0.5, -0.5, -0.5]], [[-0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5]], [[-0.5, 0.5, -0.5], [-0.5, -0.5, -0.5], 
-[-0.5, -0.5, 0.5]], [[0.5, 0.5, 0.5], [0.5, 0.5, -0.5], [-0.5, 0.5, -0.5]], [[-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, 0.5]], [[0.5, -0.5, -0.5], [0.5, -0.5, 0.5], [-0.5, -0.5, 0.5]], [[-0.5, -0.5, 0.5], [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5]]]
-
-for x in range(20):
-    for y in range(20):
-        vertexBuffer += translate(cube,(x,round(sin(x+y**2)),y))
-vertexBuffer = removeFaces(vertexBuffer)
+vertexArray = loadObj("test.obj")
 
 t = 0.5
 while True:
     # main loop
     clear(' ')
-    t+=0.001
+    
     current = time.time()
     dt = (current-last)*10
     last=current
-
+    t+=dt/1000
     if keyboard.is_pressed("down arrow"):
         if camRotX>-1.57:
             camRotX-=dt*sensitivityRot
@@ -317,10 +296,10 @@ while True:
     if keyboard.is_pressed("space"):
         camPosY+=dt*sensitivityMov
 
-    lPosX=cos(t)
-    lPosY=sin(t)
+    lPosX=50*cos(t)
+    lPosY=50*sin(t)
 
-    mesh(vertexBuffer)
+    mesh(vertexArray)
 
     if dt>0:
         fps = 10/dt
